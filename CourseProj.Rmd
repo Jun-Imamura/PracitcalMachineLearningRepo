@@ -1,0 +1,61 @@
+---
+title: "PracticalMachineLearning"
+author: "Jun Imamura"
+date: "May 25, 2015"
+output: html_document
+---
+
+***
+# Synopsis
+This document analyzes personal activity data obtained from activity sensor. The data's specification is described [here]("http://groupware.les.inf.puc-rio.br/har").
+***
+
+# Include Library and Download Dataset
+```{r, library, warning=FALSE}
+library(caret)
+library(DMwR)
+library(randomForest)
+```
+
+
+Download data from server and extracts them to variables called trainDat and testDat.
+
+```{r, dataLoading, cache=TRUE}
+urlTrain <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+urlTest <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(urlTrain, destfile="./traindat.csv", method="curl")
+download.file(urlTest, destfile="./testdat.csv", method="curl")
+trainDat <- read.csv("./traindat.csv", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
+testDat <- read.csv("./testdat.csv", na.strings=c("NA", "#DIV/0!"), stringsAsFactors = FALSE)
+```
+
+You can see some data are almost lost. There are so many covariates which is mostly consisted of NAs. In this time, I've decided to omit such a variable because it can rarely be useful for current practice.
+
+```{r, ignore}
+trainDat$classe <- as.factor(trainDat$classe)
+## See the data has too many NA values
+unique(colMeans(is.na(trainDat)))
+## Delete covariates which is mostly consist of NA values
+trainDat <- trainDat[, colMeans(is.na(trainDat))< 0.9]
+```
+
+Next, split data into training set and testing set. Testing set is used as a cross-validation set at this time.
+```{r, splitData}
+inTrain <- createDataPartition(y=trainDat$classe, p = 0.75, list=FALSE)
+# omitting undesiable variables
+training <- trainDat[inTrain, 8:60]
+testing <- trainDat[-inTrain, 8:60]
+```
+
+I used machine learning method "random forest" for modeling. This method is well known because of its performance.
+```{r, randomForest}
+model <- randomForest(classe~., data = training)
+mean(predict(model, newdata=testing[,-53])==testing$classe)
+```
+
+It seems working in very good accuracy.
+
+***
+
+# Conclusion
+In this document, personal activity data was investigated using machine learning algorithm, and random forest algorithm could achieved very good performance.
